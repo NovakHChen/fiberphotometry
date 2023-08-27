@@ -32,5 +32,5 @@ class Video:
         """Calculates frame rate based on the video meta data."""
         recording_lenght = self.recording_length()
         frames = len(self.data['epocs']['Cam1']['data'])
-        frame_rate = frames/recording_lenght
+        frame_rate = frames/recording_lenght.total_seconds()
         return frame_rate
