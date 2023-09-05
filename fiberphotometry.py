@@ -5,6 +5,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import zscore
+from scipy.signal import decimate
 import pandas as pd
 from tdt import read_block, read_sev, epoc_filter 
 matplotlib.rcParams['font.size'] = 18 # set font size for all figures
@@ -30,8 +31,8 @@ def resample(data):
     
     return time_x
 
-def downsampling(data, channel, N=10):
-    """downsampling the data for plottig
+def downsampling(data, N=10):
+    """downsampling the data 
     
     Parameters:
     -----------
@@ -45,24 +46,28 @@ def downsampling(data, channel, N=10):
     --------
     dictionary of numpy arrays with the decimated signal and time 
     """
-    decimatedData = {}
-    decimatedSignal = []
-    decimatedTime = []
+    
+
+    decimatedGCAMP = []
+    decimatedISOS = []
             
-    for i in range(0, len(data.streams[channel].data), N):        
+    for i in range(0, len(data.streams[GCAMP].data), N):        
         # This is the moving window mean
-        mean_wnd = np.mean(data.streams[channel].data[i:i+N-1])
-        decimatedSignal.append(mean_wnd)
-    np.array(decimatedSignal)
+        decimatedGCAMP.append(np.mean(np.asarray(data.streams[GCAMP].data[i:i+N-1])))
+    data.streams[GCAMP].data = np.asarray(decimatedGCAMP)
     
-    time_x = resample(data)
-    time_x = time_x[::N] # go from beginning to end of array in steps on N
-    time_x = time_x[:len(data.streams[channel].data)]
-    
-    decimatedData['decimatedSignal'] = decimatedSignal
-    decimatedData['decimatedTime'] = time_x
-    
-    return decimatedData  
+    for i in range(0, len(data.streams[ISOS].data), N):        
+        # This is the moving window mean
+        decimatedISOS.append(np.mean(np.asarray(data.streams[ISOS].data[i:i+N-1])))
+    data.streams[ISOS].data = np.asarray(decimatedISOS)
+
+    time_x = np.linspace(1,len(data.streams[GCAMP].data),
+     len(data.streams[GCAMP].data))/data.streams[GCAMP].fs
+    # time_x = resample(data)
+    # time_x = time_x[::N] # go from beginning to end of array in steps on N
+    # time_x = time_x[:len(data.streams[GCAMP].data)]
+        
+    return data
 
 def artifactRemoval(data):
     """Artifact Removal There is often a large artifact on the onset
@@ -74,9 +79,8 @@ def artifactRemoval(data):
     channel : global variable
         either GCAMP or ISOS
      """
-    noArtifactData = {}
-    noArtifactGAMP = []
-    noArtifactISOS = []
+    
+    
     t = 8
     time_x = resample(data)
     
@@ -84,31 +88,36 @@ def artifactRemoval(data):
     ind = inds[0][0]
     time_x = time_x[ind:] # go from ind to final index
     
-    noArtifactData['GCAMP'] = data.streams[GCAMP].data[ind:]
-    noArtifactData['ISOS'] = data.streams[ISOS].data[ind:]
-    noArtifactData['TIME'] = time_x
-    
-    return noArtifactData
+    data.streams[GCAMP].data = np.asarray(data.streams[GCAMP].data[ind:])
+    data.streams[ISOS].data = np.asarray(data.streams[ISOS].data[ind:])
+        
+    return data
   
     
-def detrending(data):
+def detrending(data, time=False):
     """Full trace dFF according to Lerner et al. 2015
        dFF using 405 fit as baseline
     """
-    x = artifactRemoval(data)['ISOS']
-    y = artifactRemoval(data)['GCAMP']
+    x = np.array(data.streams[ISOS].data)
+    y = np.array(data.streams[GCAMP].data)
     bls = np.polyfit(x, y, 1)
     Y_fit_all = np.multiply(bls[0], x) + bls[1]
     Y_dF_all = y - Y_fit_all
 
     dFF = np.multiply(100, np.divide(Y_dF_all, Y_fit_all))
     std_dFF = np.std(dFF)
+
+    npts = len(dFF)
+    time_x = np.linspace(1, npts, npts) / data.streams[GCAMP].fs
     
-    return dFF
+    if time:
+        return dFF, time_x
+    else:
+        return dFF
     
     
     
-def plotting(data, kind='raw'):
+def plotting(data, ax=None, kind='raw'):
     """ plotting the fiberphotometry traces
     
     Parameters:
@@ -118,42 +127,46 @@ def plotting(data, kind='raw'):
         'raw' - raw data as it was recorded
         'rawDemod' - raw demodulated data, with artifact removal
         'dfof' - delta F over F plot
+    ax : axes object (optional)
+    N : int
+        number of points for averaging 
      
     """
-    # creating the x (time) axis
-    time_x = resample(data)
     
-    fig = plt.figure(figsize=(10,6))
-    ax0 = fig.add_subplot(111)
-    
+    if ax is None:
+        ax=plt.gca()
+             
     if (kind=='raw'):
-        p1, = ax0.plot(time_x, data.streams[GCAMP].data, linewidth=2,
-                       color='green', label='GCaMP')
-        p2, = ax0.plot(time_x, data.streams[ISOS].data, linewidth=2,
-                       color='blueviolet', label='ISOS')
-        ax0.set_title('Raw Demodulated Responses')
-        ax0.set_ylabel('mV')
-        ax0.set_xlabel('Seconds')
-        ax0.set_title('raw photometry traces')
-        ax0.legend(handles=[p1,p2], loc='upper right')
+        time_x = resample(data)
+        p1, = ax.plot(time_x, np.asarray(data.streams[GCAMP].data),
+         linewidth=.2, color='green', label='GCaMP')
+        p2, = ax.plot(time_x, np.asarray(data.streams[ISOS].data),
+         linewidth=.2, color='blueviolet', label='ISOS')
+        ax.set_title('Raw Demodulated Responses')
+        ax.set_ylabel('mV')
+        ax.set_xlabel('Seconds')
+        ax.set_title('raw photometry traces')
+        ax.legend(handles=[p1,p2], loc='upper right')
      
     elif (kind=='rawDemod'):
         data = artifactRemoval(data)
-        p1, = ax0.plot(data['TIME'], data['GCAMP'], linewidth=2,
-               color='green', label='GCaMP')
-        p2, = ax0.plot(data['TIME'], data['ISOS'], linewidth=2,
-               color='blueviolet', label='ISOS')    
-        ax0.set_ylabel('mV')
-        ax0.set_xlabel('Seconds')
-        ax0.set_title('Demodolated photometry traces')
-        ax0.legend(handles=[p1,p2], loc='upper right')
+        time_x = resample(data)
+        p1, = ax.plot(time_x, np.asarray(data.streams[GCAMP].data),
+         linewidth=.2, color='green', label='GCaMP')
+        p2, = ax.plot(time_x, np.asarray(data.streams[ISOS].data),
+         linewidth=.2, color='blueviolet', label='ISOS')    
+        ax.set_ylabel('mV')
+        ax.set_xlabel('Seconds')
+        ax.set_title('Demodulated photometry traces')
+        ax.legend(handles=[p1,p2], loc='upper right')
     
-    elif (kind=='dfof'):        
-        dFF = detrending(data)
-        p1, = ax0.plot(artifactRemoval(data)['TIME'], dFF, linewidth=2,
+    elif (kind=='dfof'):                    
+        dFF, time_x = detrending(data, time=True)        
+        p1, = ax.plot(time_x, np.array(dFF), linewidth=.2,
                color='green', label='GCaMP')
-        ax0.set_ylabel(r'$\Delta$F/F')
-        ax0.set_xlabel('Seconds')
-        ax0.legend(handles=[p1], loc='upper right')
-        ax0.set_title('dFoF')
-    fig.tight_layout()    
+        ax.set_ylabel(r'$\Delta$F/F')
+        ax.set_xlabel('Seconds')
+        ax.legend(handles=[p1], loc='upper right')
+        ax.set_title('dFoF')
+
+    return ax    
