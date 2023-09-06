@@ -15,8 +15,8 @@ matplotlib.rcParams['font.size'] = 18 # set font size for all figures
 # output_notebook()
 
 # global variables
-GCAMP = '_465N' # GCaMP channel (dynamic signal) 
-ISOS = '_405N' # Isobestic channel (static signal)
+GCAMP = '_465A' # GCaMP channel (dynamic signal) 
+ISOS = '_405A' # Isobestic channel (static signal)
 
 def resample(data):
     """making a time array based on the number of samples 
