@@ -47,19 +47,18 @@ def downsampling(data, N=10):
     dictionary of numpy arrays with the decimated signal and time 
     """
     
-
-    decimatedGCAMP = []
-    decimatedISOS = []
+    decimated_GCAMP = []
+    decimated_ISOS = []
             
     for i in range(0, len(data.streams[GCAMP].data), N):        
         # This is the moving window mean
-        decimatedGCAMP.append(np.mean(np.asarray(data.streams[GCAMP].data[i:i+N-1])))
-    data.streams[GCAMP].data = np.asarray(decimatedGCAMP)
+        decimated_GCAMP.append(np.mean(np.asarray(data.streams[GCAMP].data[i:i+N-1])))
+    data.streams[GCAMP].data = np.asarray(decimated_GCAMP)
     
     for i in range(0, len(data.streams[ISOS].data), N):        
         # This is the moving window mean
-        decimatedISOS.append(np.mean(np.asarray(data.streams[ISOS].data[i:i+N-1])))
-    data.streams[ISOS].data = np.asarray(decimatedISOS)
+        decimated_ISOS.append(np.mean(np.asarray(data.streams[ISOS].data[i:i+N-1])))
+    data.streams[ISOS].data = np.asarray(decimated_ISOS)
 
     time_x = np.linspace(1,len(data.streams[GCAMP].data),
      len(data.streams[GCAMP].data))/data.streams[GCAMP].fs
@@ -69,9 +68,9 @@ def downsampling(data, N=10):
         
     return data
 
-def artifactRemoval(data):
-    """Artifact Removal There is often a large artifact on the onset
-       of LEDs turning on Remove data below a set time t
+def artifact_removal(data):
+    """There is often a large artifact on the onset
+       of LEDs turning on. This function removes data below a set time t
        
     Parameters:
     -----------
@@ -149,7 +148,7 @@ def plotting(data, ax=None, kind='raw'):
         ax.legend(handles=[p1,p2], loc='upper right')
      
     elif (kind=='rawDemod'):
-        data = artifactRemoval(data)
+        data = artifact_removal(data)
         time_x = resample(data)
         p1, = ax.plot(time_x, np.asarray(data.streams[GCAMP].data),
          linewidth=.2, color='green', label='GCaMP')

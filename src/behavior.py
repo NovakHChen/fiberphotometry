@@ -157,7 +157,6 @@ def get_imaging_folders(data_path, foldernames):
 	for folder in listdir(data_path):
 	    if fnmatch(folder, foldernames+'*'):
 	    	im_folders.append(folder)
-
 	print(f"there are {len(im_folders)} imaging folders")
 		
 	return sorted(im_folders)
