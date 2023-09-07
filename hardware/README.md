@@ -1,1 +1,1 @@
-Assembly instructions for different parts of the recording rig
+Assembly instructions for different parts of the recording rig.
