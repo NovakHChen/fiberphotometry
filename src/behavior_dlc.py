@@ -61,20 +61,22 @@ class Behavior:
         dist_moved = dist_moved.apply(np.sqrt)
         return dist_moved
 
-    def compute_velocity(self, framerate):
+    def compute_velocity(self, framerate, x_coords: pd.Series,
+                        y_coords: pd.Series) -> pd.Series:
         """
         Args:
             dist_moved: pandas Series
                 A one-dimensional ndarray containing distance moved.
 
-            framerate: int
+            framerate: int or float
                 The frame rate corresponding to the dist_moved Series.
 
         Returns:
             velocity: pandas Series
                 A one-dimensional ndarray containing velocity.
         """
-        velocity = self.distance_moved.apply(lambda x: x * np.reciprocal(framerate))
+        dist = self.distance_moved(x_coords, y_coords)
+        velocity = dist.apply(lambda x: x * np.reciprocal(framerate))
         return velocity
 
     def define_immobility(self, framerate, min_dur=1, min_vel=2, min_periods=1):
@@ -87,7 +89,7 @@ class Behavior:
         Stefanini...Fusi et al. 2018 (https://doi.org/10.1101/292953)
 
         Args:
-            framerate: int
+            framerate: int or float
                 The frame rate of the velocity Series. Default is 10 fps.
 
             min_dur: int, optional, default: 1
