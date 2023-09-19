@@ -1,0 +1,9 @@
+Metadata-Version: 2.1
+Name: fiber-photometry-analysis
+Version: 0.1
+Summary: some basic analysis code
+Home-page: https://github.com/GergelyTuri/fiberphotometry
+Author: Gergely Turi
+Author-email: gt2253@cumc.columbia.edu
+License: MIT
+License-File: LICENSE
