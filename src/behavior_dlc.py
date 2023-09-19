@@ -13,6 +13,11 @@ class Behavior:
     
     f_path = str
 
+    @classmethod
+    def from_hdf(cls, f_path):
+        """Creates a Behavior instance from a hdf5 file."""
+        return cls(f_path)
+    
     def __post_init__(self):
         """Reads in the data from the hdf5 file."""
         self.data = pd.read_hdf(self.f_path)
@@ -89,7 +94,7 @@ class Behavior:
         Args:
             framerate: int
                 The frame rate of the velocity Series. Default is 10 fps.
-                
+
             min_dur: int, optional, default: 1
                 The minimum length of time in seconds in which velocity must be low.
 
