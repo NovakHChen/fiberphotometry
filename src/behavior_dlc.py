@@ -10,13 +10,8 @@ import pandas as pd
 @dataclass
 class Behavior:
     """Class for analyzing behavior data tracked with DeepLabCut"""
-    
-    f_path = str
 
-    @classmethod
-    def from_hdf(cls, f_path):
-        """Creates a Behavior instance from a hdf5 file."""
-        return cls(f_path)
+    f_path: str
     
     def __post_init__(self):
         """Reads in the data from the hdf5 file."""
