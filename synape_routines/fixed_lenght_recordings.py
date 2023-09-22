@@ -1,6 +1,8 @@
 """
 Set lenght of recording for running fiberphotometry experiments. 
 This is a modified version of the example script from TDT.
+This def does not work as expected. the recording time is 2x
+longer than TOTAL_TIME.
 """
 #!/usr/bin/env python
 # coding: utf-8
