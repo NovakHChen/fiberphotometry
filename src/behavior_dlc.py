@@ -60,8 +60,8 @@ class Behavior:
         dist_moved = np.sqrt(delta_x**2 + delta_y**2)
         return dist_moved
 
-    def compute_velocity(self, framerate=10, x_coords: pd.Series,
-                        y_coords: pd.Series) -> pd.Series:
+    def compute_velocity(self, x_coords: pd.Series,
+                        y_coords: pd.Series, framerate=10) -> pd.Series:
         """
         Args:
             framerate: int or float
