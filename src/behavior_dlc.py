@@ -57,29 +57,29 @@ class Behavior:
 
         delta_x = self.pairwise_dist(x_coords.astype(float))
         delta_y = self.pairwise_dist(y_coords.astype(float))
-        dist_moved = delta_x**2 + delta_y**2
-        dist_moved = dist_moved.apply(np.sqrt)
+        dist_moved = np.sqrt(delta_x**2 + delta_y**2)
         return dist_moved
 
-    def compute_velocity(self, framerate, x_coords: pd.Series,
+    def compute_velocity(self, framerate=10, x_coords: pd.Series,
                         y_coords: pd.Series) -> pd.Series:
         """
         Args:
-            dist_moved: pandas Series
-                A one-dimensional ndarray containing distance moved.
-
             framerate: int or float
-                The frame rate corresponding to the dist_moved Series.
+                The frame rate of the video. Default is 10 fps.
+            x_coords: pandas Series
+                A one-dimensional ndarray of x coordinates of a body part.
+            y_coords: pandas Series
+                A one-dimensional ndarray of y coordinates of a body part.
 
         Returns:
             velocity: pandas Series
-                A one-dimensional ndarray containing velocity.
+                A one-dimensional ndarray containing velocity in pixel/sec.
         """
         dist = self.distance_moved(x_coords, y_coords)
-        velocity = dist.apply(lambda x: x * np.reciprocal(framerate))
+        velocity = dist * (1/framerate)
         return velocity
 
-    def define_immobility(self, framerate, min_dur=1, min_vel=2, min_periods=1):
+    def define_immobility(self, framerate=10, min_dur=1, min_vel=2, min_periods=1):
         """Define time periods of immobility based on a rolling window of velocity.
 
         A Mouse is considered immobile if velocity has not exceeded min_vel for the
@@ -112,7 +112,8 @@ class Behavior:
 
         """
         window_size = framerate * min_dur
-        rolling_max_vel = self.compute_velocity.rolling(window_size,
+        velo = self.compute_velocity(framerate, self.data['x'], self.data['y'])
+        rolling_max_vel = velo.rolling(window_size,
                                         min_periods=min_periods).max()
         mobile_immobile = (rolling_max_vel < min_vel).astype(int)
 
