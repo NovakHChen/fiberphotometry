@@ -76,7 +76,8 @@ class Behavior:
                 A one-dimensional ndarray containing velocity in pixel/sec.
         """
         dist = self.distance_moved(x_coords, y_coords)
-        velocity = dist * (1/framerate)
+        time = 1 / framerate  # Calculate the time for one frame
+        velocity = dist / time        
         return velocity
 
     def define_immobility(self, x_coords: pd.Series, y_coords: pd.Series,
