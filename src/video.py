@@ -20,7 +20,10 @@ from cv2 import (
 
 @dataclass
 class UsbVideo:
-    """Video class to handle video files recored with USB camera."""
+    """Video class to handle video files recored with USB camera.
+    Initialize with the path to the video file.
+    Example:
+    >>> video = UsbVideo(vid_path="path/to/video.avi")"""
 
     vid_path: str
 
@@ -52,9 +55,23 @@ class UsbVideo:
             Start frame.
         end: int
             End frame.
+        codec: str
+            Codec to use for saving the video.
+            e.g. "MJPG" or "XVID"
         """
         cap = self.video
         save_path = self.vid_path.split(".")[0]
+
+        # validate input
+        if start < 0:
+            raise ValueError("Start frame must be non-negative.")
+        if end < start:
+            raise ValueError("End frame must be greater than or equal to start frame.")
+        total_frames = int(cap.get(CAP_PROP_FRAME_COUNT))
+        if end >= total_frames:
+            raise ValueError(
+                f"End frame must be less than total frames ({total_frames})."
+            )
 
         # setup the video writer
         w_frame, h_frame = int(cap.get(CAP_PROP_FRAME_WIDTH)), int(
@@ -68,13 +85,17 @@ class UsbVideo:
         )
         counter = 0
         # read until the 'end'
-        while cap.isOpened() and counter <= end:
-            ret, frame = cap.read()
-            counter += 1
-            if ret:
-                if counter >= start:
-                    out.write(frame)
-            else:
-                break
-        cap.release()
-        out.release()
+        try:
+            while cap.isOpened() and counter <= end:
+                ret, frame = cap.read()
+                counter += 1
+                if ret:
+                    if counter >= start:
+                        out.write(frame)
+                else:
+                    break
+        except Exception as error:
+            print(f"Error occured: {error}")
+        finally:
+            cap.release()
+            out.release()

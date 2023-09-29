@@ -20,15 +20,15 @@ class FiberPhotometry:
     """
 
     tank_path: str  # path to TDT tank
-    DYNAMIC = str  # e.g. GCaMP channel (dynamic signal)
-    ISOS = str  # Isobestic channel (static signal)
+    dynamic = str  # e.g. GCaMP channel (dynamic signal)
+    isos = str  # Isobestic channel (static signal)
 
     def __post_init__(self):
         self.data = read_block(self.tank_path)
-        self.DYNAMIC = "_465A"  # GCaMP channel (dynamic signal)
-        self.ISOS = "_405A"  # Isobestic channel (static signal)
+        self.dynamic = "_465A"  # GCaMP channel (dynamic signal)
+        self.isos = "_405A"  # Isobestic channel (static signal)
 
-    def calculate_deltaF_F(self) -> np.array:
+    def calculate_deltaf_f(self) -> np.array:
         """This function calculates the dF/F signal
         from the raw data.
 
@@ -38,8 +38,8 @@ class FiberPhotometry:
             dF/F signal
         """
         # Preprocess
-        GCaMP_prepro, GCaMP_denoised = self.preprocess(signal="DYNAMIC")
-        ISOS_prepro, _ = self.preprocess(signal="ISOS")
+        GCaMP_prepro, GCaMP_denoised = self.preprocess(signal="dynamic")
+        ISOS_prepro, _ = self.preprocess(signal="isos")
 
         # Correct motion
         GCaMP_corrected = self.correct_motion(GCaMP_prepro, ISOS_prepro)
@@ -55,7 +55,7 @@ class FiberPhotometry:
         return self.data.streams["_465A"].fs
 
     def preprocess(self, signal: str) -> np.array:
-        """This function denoises GCaMP or ISOS signals
+        """This function denoises GCaMP or isos signals
         with a median ad lowpass filter. Then it fits a 4th order
         polyonmial to the data subtracts the polyomial fit from the
         raw data.
@@ -63,7 +63,7 @@ class FiberPhotometry:
         Parameters:
         -----------
         signal: str
-            'DYNAMIC' or 'ISOS'
+            'dynamic' or 'isos'
 
         Returns:
         --------
@@ -72,10 +72,10 @@ class FiberPhotometry:
         denoised: np.array
             Denoised signal
         """
-        if signal == "DYNAMIC":
-            raw = self.data.streams[self.DYNAMIC]
-        elif signal == "ISOS":
-            raw = self.data.streams[self.ISOS]
+        if signal == "dynamic":
+            raw = self.data.streams[self.dynamic]
+        elif signal == "isos":
+            raw = self.data.streams[self.isos]
 
         # Median and lowpass filter with filtfilt
         denoised_med = medfilt(raw.data, kernel_size=5)
@@ -106,7 +106,7 @@ class FiberPhotometry:
         GCaMP_prepro: np.array
             Preprocessed GCaMP signal
         ISOS_prepro: np.array
-            Preprocessed ISOS signal
+            Preprocessed isos signal
 
         Returns:
         --------
@@ -125,7 +125,7 @@ class FiberPhotometry:
 
         return GCaMP_corrected
 
-    def deltaF_F(self, GCaMP_corrected, denoised):
+    def deltaf_f(self, GCaMP_corrected, denoised):
         """This function calculates the dF/F using the
         denoised data and the motion corrected.
 
@@ -169,7 +169,7 @@ class DeltaFoFstrategies:
         dF_F: np.array
             dF/F signal
         """
-        x = f_data["streams"]["_405A"].data[500:]  # ISOS
+        x = f_data["streams"]["_405A"].data[500:]  # isos
         y = f_data["streams"]["_465A"].data[500:]  # GCaMP
 
         bls = np.polyfit(x, y, 1)
