@@ -66,5 +66,4 @@ class UsbVideo:
                 break
         cap.release()
         out.release()
-        return None
 
