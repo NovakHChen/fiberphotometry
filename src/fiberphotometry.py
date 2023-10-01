@@ -45,7 +45,7 @@ class FiberPhotometry:
         GCaMP_corrected = self.correct_motion(GCaMP_prepro, ISOS_prepro)
 
         # Calculate dF/F
-        GCaMP_dF_F = self.deltaF_F(GCaMP_corrected, GCaMP_denoised)
+        GCaMP_dF_F = self.deltaf_f(GCaMP_corrected, GCaMP_denoised)
 
         return GCaMP_dF_F
 
