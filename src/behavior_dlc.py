@@ -4,15 +4,20 @@ gt2253@cumc.columbia.edu"""
 
 
 from dataclasses import dataclass
+
 import numpy as np
 import pandas as pd
 
+
 @dataclass
 class Behavior:
-    """Class for analyzing behavior data tracked with DeepLabCut"""
+    """Class for analyzing behavior data tracked with DeepLabCut.
+    Example:
+    >>> dlc = Behavior(f_path="path/to/data.h5")
+    >>> dlc_data = dlc.data"""
 
     f_path: str
-    
+
     def __post_init__(self):
         """Reads in the data from the hdf5 file."""
         self.data = pd.read_hdf(self.f_path)
@@ -35,8 +40,7 @@ class Behavior:
         delta_x = (np.roll(coords, -1) - x_coords).shift(1)
         return delta_x
 
-    def distance_moved(self, x_coords: pd.Series,
-                        y_coords: pd.Series) -> pd.Series:
+    def distance_moved(self, x_coords: pd.Series, y_coords: pd.Series) -> pd.Series:
         """Computes the distance moved per frame
 
         Args:
@@ -60,8 +64,9 @@ class Behavior:
         dist_moved = np.sqrt(delta_x**2 + delta_y**2)
         return dist_moved
 
-    def compute_velocity(self, x_coords: pd.Series,
-                        y_coords: pd.Series, framerate=10) -> pd.Series:
+    def compute_velocity(
+        self, x_coords: pd.Series, y_coords: pd.Series, framerate=10
+    ) -> pd.Series:
         """
         Args:
             framerate: int or float
@@ -77,12 +82,18 @@ class Behavior:
         """
         dist = self.distance_moved(x_coords, y_coords)
         time = 1 / framerate  # Calculate the time for one frame
-        velocity = dist / time        
+        velocity = dist / time
         return velocity
 
-    def define_immobility(self, x_coords: pd.Series, y_coords: pd.Series,
-                           framerate=10, min_dur=1, min_vel=2,
-                            min_periods=1):
+    def define_immobility(
+        self,
+        x_coords: pd.Series,
+        y_coords: pd.Series,
+        framerate=10,
+        min_dur=1,
+        min_vel=2,
+        min_periods=1,
+    ):
         """Define time periods of immobility based on a rolling window of velocity.
 
         A Mouse is considered immobile if velocity has not exceeded min_vel for the
@@ -116,8 +127,8 @@ class Behavior:
         """
         window_size = framerate * min_dur
         velo = self.compute_velocity(x_coords, y_coords, framerate)
-        rolling_max_vel = velo.rolling(window_size,
-                                        min_periods=min_periods).max()
+        rolling_max_vel = velo.rolling(window_size, min_periods=min_periods).max()
         mobile_immobile = (rolling_max_vel < min_vel).astype(int)
 
+        return mobile_immobile
         return mobile_immobile
