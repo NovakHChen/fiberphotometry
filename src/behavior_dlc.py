@@ -103,6 +103,12 @@ class Behavior:
         Stefanini...Fusi et al. 2018 (https://doi.org/10.1101/292953)
 
         Args:
+            x_coords: pandas Series
+                A one-dimensional ndarray of x coordinates of a body part.
+
+            y_coords: pandas Series
+                A one-dimensional ndarray of y coordinates of a body part.
+
             framerate: int or float
                 The frame rate of the velocity Series. Default is 10 fps.
 
@@ -130,5 +136,4 @@ class Behavior:
         rolling_max_vel = velo.rolling(window_size, min_periods=min_periods).max()
         mobile_immobile = (rolling_max_vel < min_vel).astype(int)
 
-        return mobile_immobile
         return mobile_immobile
