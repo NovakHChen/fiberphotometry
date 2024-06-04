@@ -1,1 +1,1 @@
-# Variious software tools and scripts
+# Various software tools and scripts
