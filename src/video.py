@@ -6,7 +6,6 @@ gt2253@cumc.columbia.edu
 from dataclasses import dataclass
 import tdt
 
-
 @dataclass
 class Video:
     """Video class to handle video files recored with USB camera."""
