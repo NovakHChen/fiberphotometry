@@ -8,5 +8,6 @@ setup(
     license='MIT',
     author='Gergely Turi',
     author_email='gt2253@cumc.columbia.edu',
-    description='some basic analysis code'
+    description='some basic analysis code',
+    install_requires=['tdt'],
 )

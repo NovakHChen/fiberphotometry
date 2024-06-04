@@ -1,0 +1,10 @@
+__pycache__
+.ipynb_checkpoints
+/notebooks/Untitled.ipynb
+/notebooks/.ipynb_checkpoints
+/build
+/dist
+*.egg-info
+.conda
+/test_data
+.vscode
