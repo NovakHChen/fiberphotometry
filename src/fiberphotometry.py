@@ -3,6 +3,7 @@ This class is based on [FiberFlow](https://github.com/MicTott/FiberFlow)
 maintainer: @gergelyturi"""
 
 from dataclasses import dataclass
+from typing import Tuple
 
 import numpy as np
 from scipy.signal import butter, filtfilt, medfilt
@@ -14,75 +15,73 @@ from tdt import read_block
 class FiberPhotometry:
     """Class for analyzing fiber photometry data.
     Initialize with the path to the TDT tank.
+
     Example:
     >>> tdt_tank = fp(tank_path="path/to/tank")
     >>> fiberphotometry_data = tdt_tank.data
     """
 
     tank_path: str  # path to TDT tank
-    dynamic = str  # e.g. GCaMP channel (dynamic signal)
-    isos = str  # Isobestic channel (static signal)
+
+    DYNAMIC_CHANNEL: str = "_465A"  # e.g. GCaMP channel (dynamic signal)
+    ISOS_CHANNEL: str = "_405A"  # Isobestic channel (static signal)
 
     def __post_init__(self):
-        self.data = read_block(self.tank_path)
-        self.dynamic = "_465A"  # GCaMP channel (dynamic signal)
-        self.isos = "_405A"  # Isobestic channel (static signal)
+        try:
+            self.data = read_block(self.tank_path)
+        except Exception as e:
+            raise RuntimeError(f"Error reading TDT tank: {e}")
 
     def calculate_deltaf_f(self) -> np.array:
-        """This function calculates the dF/F signal
-        from the raw data.
+        """Calculates the dF/F signal from the raw data.
 
         Returns:
         --------
-        GCaMP_dF_F: np.array
+        np.array
             dF/F signal
         """
         # Preprocess
-        GCaMP_prepro, GCaMP_denoised = self.preprocess(signal="dynamic")
-        ISOS_prepro, _ = self.preprocess(signal="isos")
+        signal_prepro, signal_denoised = self.preprocess(signal="dynamic")
+        isos_prepro, _ = self.preprocess(self.ISOS_CHANNEL)
 
         # Correct motion
-        GCaMP_corrected = self.correct_motion(GCaMP_prepro, ISOS_prepro)
+        signal_corrected = self.correct_motion(signal_prepro, isos_prepro)
 
         # Calculate dF/F
-        GCaMP_dF_F = self.deltaf_f(GCaMP_corrected, GCaMP_denoised)
+        signal_dF_F = self.deltaf_f(signal_corrected, signal_denoised)
 
-        return GCaMP_dF_F
+        return signal_dF_F
 
     @property
-    def sampling_frequency(self):
+    def sampling_frequency(self) -> float:
         """Sampling frequency of the data."""
-        return self.data.streams["_465A"].fs
+        return self.data.streams[self.DYNAMIC_CHANNEL].fs
 
-    def preprocess(self, signal: str) -> np.array:
-        """This function denoises GCaMP or isos signals
-        with a median ad lowpass filter. Then it fits a 4th order
-        polyonmial to the data subtracts the polyomial fit from the
-        raw data.
+    def preprocess(self, channel: str) -> Tuple[np.array, np.array]:
+        """Denoises signal with a median ad lowpass filter, then subtract
+        a 4th order polyonmial fit from the data.
 
         Parameters:
         -----------
-        signal: str
-            'dynamic' or 'isos'
+        channel: str
+            Channel name, 'DYNAMIC_CHANNEL' or 'ISOS_CHANNEL'
 
         Returns:
         --------
-        debleached: np.array
-            Debleached signal
-        denoised: np.array
-            Denoised signal
+        Tuple[np.ndarray, np.ndarray]
+            Debleached and denoised signals
         """
-        if signal == "dynamic":
-            raw = self.data.streams[self.dynamic]
-        elif signal == "isos":
-            raw = self.data.streams[self.isos]
+        try:
+            raw = self.data.streams[channel]
+        except KeyError:
+            raise ValueError(f"Channel {channel} not found in data.")
 
         # Median and lowpass filter with filtfilt
-        denoised_med = medfilt(raw.data, kernel_size=5)
+        median_filter = medfilt(raw.data, kernel_size=5)
 
         fs = self.sampling_frequency
         b, a = butter(2, 10, btype="low", fs=fs)
-        denoised = filtfilt(b, a, denoised_med)
+        denoised = filtfilt(b, a, median_filter)
 
         # Fit 4th order polynomial to GCaMP signal and subtract
         coefs = np.polyfit(
@@ -96,49 +95,48 @@ class FiberPhotometry:
 
         return debleached, denoised
 
-    def correct_motion(self, GCaMP_prepro, ISOS_prepro) -> np.array:
-        """This function takes preprocessed GCaMP and Isosbestic
-        sigals and finds the linear fit, then estimates the
-        motion correction and substracts it from GCaMP.
+    def correct_motion(self, signal_prepro, isos_prepro) -> np.array:
+        """Correct motion by finding the linear fit between preprocessed
+        singal and isosbestic signals.
 
         Parameters:
         -----------
-        GCaMP_prepro: np.array
-            Preprocessed GCaMP signal
-        ISOS_prepro: np.array
-            Preprocessed isos signal
+        signal_prepro: np.array
+            Preprocessed signal signal (i.e. debleached)
+        isos_prepro: np.array
+            Preprocessed isos signal (i.e. debleached)
 
         Returns:
         --------
-        GCaMP_corrected: np.array
-            Motion corrected GCaMP signal
+        motion_corrected: np.array
+            Motion corrected signal
         """
 
         # find linear fit
         slope, intercept, r_value, p_value, std_err = linregress(
-            x=ISOS_prepro, y=GCaMP_prepro
+            x=isos_prepro, y=signal_prepro
         )
 
         # estimate motion correction and subtract
-        GCaMP_est_motion = intercept + slope * ISOS_prepro
-        GCaMP_corrected = GCaMP_prepro - GCaMP_est_motion
+        est_motion = intercept + slope * isos_prepro
+        motion_corrected = signal_prepro - est_motion
 
-        return GCaMP_corrected
+        return motion_corrected
 
-    def deltaf_f(self, GCaMP_corrected, denoised):
+    def deltaf_f(self, motion_corrected, denoised):
         """This function calculates the dF/F using the
         denoised data and the motion corrected.
 
         Parameters:
         -----------
-        GCaMP_corrected: np.array
+        motion_corrected: np.array
             Motion corrected GCaMP signal
         denoised: np.array
             Denoised GCaMP signal
 
         Returns:
         --------
-        GCaMP_dF_F: np.array
+        dF_F: np.array
             dF/F signal
         """
 
@@ -146,15 +144,16 @@ class FiberPhotometry:
         b, a = butter(2, 0.001, btype="low", fs=fs)
         baseline_fluorescence = filtfilt(b, a, denoised, padtype="even")
 
-        GCaMP_dF_F = GCaMP_corrected / baseline_fluorescence
+        dF_F = motion_corrected / baseline_fluorescence
 
-        return GCaMP_dF_F
+        return dF_F
 
 
 class DeltaFoFstrategies:
     """Class for various strategies of calculating dF/F from fiber photometry data."""
 
-    def dfof_tdt(self, f_data):
+    @staticmethod
+    def dfof_tdt(f_data):
         """Calculate dF/F using the method in the TDT Offline Data Analysis workbook.
         based on Lerner et al. 2015
         https://dx.doi.org/10.1016/j.cell.2015.07.014
