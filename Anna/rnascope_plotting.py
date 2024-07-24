@@ -1,4 +1,5 @@
-
+import matplotlib.pyplot as plt
+import pandas as pd
 def plot_data(stats: pd.DataFrame, df: pd.DataFrame, area_name: str, colors: list, value_col: str = 'back_minus_value', group_col: str = 'drug') -> None:
     """
     Plot the data with bar plots and scatter points.
