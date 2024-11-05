@@ -30,27 +30,7 @@ class FiberPhotometry:
         try:
             self.data = read_block(self.tank_path)
         except Exception as e:
-            raise RuntimeError(f"Error reading TDT tank: {e}")
-
-    def calculate_deltaf_f(self) -> np.array:
-        """Calculates the dF/F signal from the raw data.
-
-        Returns:
-        --------
-        np.array
-            dF/F signal
-        """
-        # Preprocess
-        signal_prepro, signal_denoised = self.preprocess(signal="dynamic")
-        isos_prepro, _ = self.preprocess(self.ISOS_CHANNEL)
-
-        # Correct motion
-        signal_corrected = self.correct_motion(signal_prepro, isos_prepro)
-
-        # Calculate dF/F
-        signal_dF_F = self.deltaf_f(signal_corrected, signal_denoised)
-
-        return signal_dF_F
+            raise RuntimeError(f"Error reading TDT tank: {e}")   
 
     @property
     def sampling_frequency(self) -> float:
@@ -147,6 +127,26 @@ class FiberPhotometry:
         dF_F = motion_corrected / baseline_fluorescence
 
         return dF_F
+    
+    def calculate_deltaf_f(self) -> np.array:
+        """Calculates the dF/F signal from the raw data.
+
+        Returns:
+        --------
+        np.array
+            dF/F signal
+        """
+        # Preprocess
+        signal_prepro, signal_denoised = self.preprocess(self.DYNAMIC_CHANNEL)
+        isos_prepro, _ = self.preprocess(self.ISOS_CHANNEL)
+
+        # Correct motion
+        signal_corrected = self.correct_motion(signal_prepro, isos_prepro)
+
+        # Calculate dF/F
+        signal_dF_F = self.deltaf_f(signal_corrected, signal_denoised)
+
+        return signal_dF_F
 
 
 class DeltaFoFstrategies:

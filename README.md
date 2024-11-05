@@ -28,7 +28,7 @@ Basic routines for reading, visualizing and analyzing fiberphotometry recordings
 
 ## Installation in a Google Colab notebook
 
-1. open a Colab notebook then type this in a code cell"
+1. open a Colab notebook then type this in a code cell:
     ```bash    
     !git clone https://github.com/GergelyTuri/fiberphotometry.git
     %cd fiberphotometry
