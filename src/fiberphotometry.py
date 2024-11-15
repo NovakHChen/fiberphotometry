@@ -121,8 +121,8 @@ class FiberPhotometryAnalysis:
     def calculate_deltaf_f(self, strategy: str = "default") -> np.array:
         """Calculates the dF/F signal from the raw data using the specified strategy."""
         # Load data
-        dynamic_data = self.photometry.load_data(self.photometry.DYNAMIC_CHANNEL)
-        isos_data = self.photometry.load_data(self.photometry.ISOS_CHANNEL)
+        dynamic_data = self.photometry.load_data(self.photometry.DYNAMIC_CHANNEL.value)
+        isos_data = self.photometry.load_data(self.photometry.ISOS_CHANNEL.value)
 
         if strategy == "default":
             # Preprocess signals
@@ -169,13 +169,13 @@ class DeltaFoFStrategies:
         dF_F: np.array
             dF/F signal
         """
-        x = f_data["streams"][Channels.ISOS.value].data[500:]  # isos
-        y = f_data["streams"][Channels.DYNAMIC.value].data[500:]  # GCaMP
+        x = f_data["streams"][Channels.ISOS.value].data  # isos
+        y = f_data["streams"][Channels.DYNAMIC.value].data  # GCaMP
 
         bls = np.polyfit(x, y, 1)
 
-        Y_fit_all = np.multiply(bls[0], x) + bls[1]
+        Y_fit_all = bls[0] * y + bls[1] if bls[0] >= 0 else np.mean(y)
         Y_dF_all = y - Y_fit_all
 
-        dF_F = np.multiply(100, np.divide(Y_dF_all, Y_fit_all))
+        dF_F = 100 * (Y_dF_all / Y_fit_all)
         return dF_F
