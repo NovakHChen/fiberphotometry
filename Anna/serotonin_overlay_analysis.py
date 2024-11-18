@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy.ndimage import gaussian_filter1d
-from tdt import read_block
 
 
 def process_fluorescence_data(block, serotonin_channel="_465A", isos_channel="_405A"):

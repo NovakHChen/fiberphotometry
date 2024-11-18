@@ -13,13 +13,17 @@ authors = [
 license = { text = "MIT" }
 requires-python = ">=3.10.12"
 dependencies = [
+  "bokeh",
   "easygui",
+  "holoviews",
   "ipykernel",
   "ipython",
+  "jinja2",
   "jupyter",
   "matplotlib",
   "notebook",
   "numpy",
+  "opencv-python",
   "pandas",
   "rich",
   "scikit-learn",
