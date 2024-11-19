@@ -85,18 +85,18 @@ class UsbVideo:
             params["frame_count"] = cap.get(CAP_PROP_FRAME_COUNT)
         cap.release()
 
-        self.fps = params["fps"]
+        self.fps = int(params["fps"])
 
         if self.preCue_onset is not None and self.postCue_onset is not None:
             self.seconds4Cue = None
         else:
             self.preCue_onset = (
-                int(params["fps"] * self.seconds4Cue)
+                int(self.fps * self.seconds4Cue)
                 if self.preCue_onset is None
                 else self.preCue_onset
             )
             self.postCue_onset = (
-                int(params["fps"] * self.seconds4Cue)
+                int(self.fps * self.seconds4Cue)
                 if self.postCue_onset is None
                 else self.postCue_onset
             )
@@ -104,7 +104,7 @@ class UsbVideo:
         return params
 
     @property
-    def video_create4fz(self) -> dict:
+    def video_create4FreezeAnalysis(self) -> dict:
         return create_video_dict(
             video_path=self.vid_path,
             start=self.start,
