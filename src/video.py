@@ -8,6 +8,7 @@ from dataclasses import dataclass
 import os
 from os.path import join
 from enum import Enum
+from .FreezeAnalysis import create_video_dict
 
 
 from cv2 import (
@@ -69,16 +70,7 @@ class UsbVideo:
         f_path: str
             Path to the folder containing data."""
         self.video = VideoCapture(self.vid_path)
-
         self.sessFolder = os.path.dirname(self.vid_path)
-        self.video_dict = {
-            "dpath": self.sessFolder,
-            "file": self.vid_path,
-            "start": self.start,
-            "end": self.end,
-            "dsmpl": self.dsmpl,
-            "stretch": dict(width=self.width, height=self.height),
-        }
 
     @property
     def video_params(self) -> dict:
@@ -92,6 +84,8 @@ class UsbVideo:
             params["fps"] = cap.get(CAP_PROP_FPS)
             params["frame_count"] = cap.get(CAP_PROP_FRAME_COUNT)
         cap.release()
+
+        self.fps = params["fps"]
 
         if self.preCue_onset is not None and self.postCue_onset is not None:
             self.seconds4Cue = None
@@ -108,6 +102,18 @@ class UsbVideo:
             )
 
         return params
+
+    @property
+    def video_create4fz(self) -> dict:
+        return create_video_dict(
+            video_path=self.vid_path,
+            start=self.start,
+            end=self.end,
+            dsmpl=self.dsmpl,
+            width=self.width,
+            height=self.height,
+            fps=self.fps,
+        )
 
     def slice_video(self, start: int, end: int, codec: str) -> None:
         """Slices the video between start and end frames.
