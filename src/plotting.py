@@ -124,3 +124,12 @@ class FP_Plotting:
                     color=self.colors["Points"],
                     linestyle=linestyle,
                 )
+
+    def create_ShockLine(self, ax, shock_time=0):
+        """Creates a shock line on the plot.
+
+        Args:
+            ax (matplotlib.axes.Axes): The axes to plot the shock line on.
+            shock_time (int, optional): The time of the shock. Defaults to 0, assuming data for X is time from shock onset.
+        """
+        ax.axvline(x=shock_time, color="red", linestyle="--", label="Shock")
