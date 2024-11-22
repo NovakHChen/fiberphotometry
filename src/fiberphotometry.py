@@ -9,12 +9,17 @@ import numpy as np
 from scipy.signal import butter, filtfilt, medfilt
 from scipy.stats import linregress
 from tdt import read_block
+from enum import Enum
+
+
+class Channels(Enum):
+    DYNAMIC = "_465A"
+    ISOS = "_405A"
 
 
 @dataclass
-class FiberPhotometry:
-    """Class for analyzing fiber photometry data.
-    Initialize with the path to the TDT tank.
+class ImportTDTData:
+    """Class for reading TDT tank data.
 
     Example:
     >>> tdt_tank = fp(tank_path="path/to/tank")
@@ -23,14 +28,14 @@ class FiberPhotometry:
 
     tank_path: str  # path to TDT tank
 
-    DYNAMIC_CHANNEL: str = "_465A"  # e.g. GCaMP channel (dynamic signal)
-    ISOS_CHANNEL: str = "_405A"  # Isobestic channel (static signal)
+    DYNAMIC_CHANNEL: str = Channels.DYNAMIC.value
+    ISOS_CHANNEL: str = Channels.ISOS.value
 
     def __post_init__(self):
         try:
             self.data = read_block(self.tank_path)
         except Exception as e:
-            raise RuntimeError(f"Error reading TDT tank: {e}")   
+            raise RuntimeError(f"Error reading TDT tank: {e}")
 
     @property
     def sampling_frequency(self) -> float:
@@ -49,7 +54,9 @@ class SignalPreprocessor:
     """Class for preprocessing signals from fiber photometry data."""
 
     @staticmethod
-    def preprocess(raw_data: np.array, sampling_frequency: float) -> Tuple[np.array, np.array]:
+    def preprocess(
+        raw_data: np.array, sampling_frequency: float
+    ) -> Tuple[np.array, np.array]:
         """Denoises signal with a median and lowpass filter, then subtracts a 4th order polynomial fit from the data."""
         # Median and lowpass filter with filtfilt
         median_filter = medfilt(raw_data, kernel_size=5)
@@ -90,7 +97,10 @@ class DeltaFoFCalculator:
     """Class for calculating dF/F from fiber photometry data."""
 
     @staticmethod
-    def calculate_dfof(motion_corrected: np.array, denoised: np.array, sampling_frequency: float) -> np.array:
+    def calculate_dfof(
+        motion_corrected: np.array, denoised: np.array, sampling_frequency: float
+    ) -> np.array:
+    
         """Calculates the dF/F using the denoised data and the motion corrected signal."""
         b, a = butter(2, 0.001, btype="low", fs=sampling_frequency)
         baseline_fluorescence = filtfilt(b, a, denoised, padtype="even")
@@ -107,24 +117,32 @@ class FiberPhotometryAnalysis:
     tank_path: str
 
     def __post_init__(self):
-        self.photometry = FiberPhotometry(tank_path=self.tank_path)
+        self.photometry = ImportTDTData(tank_path=self.tank_path)
 
     def calculate_deltaf_f(self, strategy: str = "default") -> np.array:
         """Calculates the dF/F signal from the raw data using the specified strategy."""
         # Load data
-        dynamic_data = self.photometry.load_data(self.photometry.DYNAMIC_CHANNEL)
-        isos_data = self.photometry.load_data(self.photometry.ISOS_CHANNEL)
+        dynamic_data = self.photometry.load_data(self.photometry.DYNAMIC_CHANNEL.value)
+        isos_data = self.photometry.load_data(self.photometry.ISOS_CHANNEL.value)
 
         if strategy == "default":
             # Preprocess signals
-            signal_prepro, signal_denoised = SignalPreprocessor.preprocess(dynamic_data, self.photometry.sampling_frequency)
-            isos_prepro, _ = SignalPreprocessor.preprocess(isos_data, self.photometry.sampling_frequency)
+            signal_prepro, signal_denoised = SignalPreprocessor.preprocess(
+                dynamic_data, self.photometry.sampling_frequency
+            )
+            isos_prepro, _ = SignalPreprocessor.preprocess(
+                isos_data, self.photometry.sampling_frequency
+            )
 
             # Correct motion
-            signal_corrected = MotionCorrector.correct_motion(signal_prepro, isos_prepro)
+            signal_corrected = MotionCorrector.correct_motion(
+                signal_prepro, isos_prepro
+            )
 
             # Calculate dF/F
-            signal_dF_F = DeltaFoFCalculator.calculate_dfof(signal_corrected, signal_denoised, self.photometry.sampling_frequency)
+            signal_dF_F = DeltaFoFCalculator.calculate_dfof(
+                signal_corrected, signal_denoised, self.photometry.sampling_frequency
+            )
         elif strategy == "tdt":
             signal_dF_F = DeltaFoFStrategies.dfof_tdt(self.photometry.data)
         else:
@@ -152,13 +170,13 @@ class DeltaFoFStrategies:
         dF_F: np.array
             dF/F signal
         """
-        x = f_data["streams"]["_405A"].data[500:]  # isos
-        y = f_data["streams"]["_465A"].data[500:]  # GCaMP
+        x = f_data["streams"][Channels.ISOS.value].data  # isos
+        y = f_data["streams"][Channels.DYNAMIC.value].data  # GCaMP
 
         bls = np.polyfit(x, y, 1)
 
-        Y_fit_all = np.multiply(bls[0], x) + bls[1]
+        Y_fit_all = bls[0] * y + bls[1] if bls[0] >= 0 else np.mean(y)
         Y_dF_all = y - Y_fit_all
 
-        dF_F = np.multiply(100, np.divide(Y_dF_all, Y_fit_all))
+        dF_F = 100 * (Y_dF_all / Y_fit_all)
         return dF_F
