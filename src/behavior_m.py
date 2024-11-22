@@ -1,6 +1,9 @@
-# dealing with beahvior data
-# GT 2021
+"""
+class for behavior data analysis recorded with YP's matlab code
+GT 2021
+"""
 
+"""This is how the data looks in the matlabfile
 # %init the data
 # function initData()
 # setappdata(0,'trackData',[]);       %track data = [time,xy,miceNum];
@@ -32,6 +35,7 @@
 # lastPos=repmat(lastPos,m,1);
 #
 # these are some comments (after %) for some key variables
+"""
 
 from os import chdir, listdir, walk, path
 

@@ -1,171 +1,181 @@
-# scripts for fiber photometry recordings. 
-# GT 2021
+"""Dataclass for analyzing fiber photometry data.
+This class is based on [FiberFlow](https://github.com/MicTott/FiberFlow)
+maintainer: @gergelyturi"""
 
-import matplotlib
-import matplotlib.pyplot as plt
+from dataclasses import dataclass
+from enum import Enum
+from typing import Tuple
+
 import numpy as np
-from scipy.stats import zscore
-from scipy.signal import decimate
-import pandas as pd
-from tdt import read_block, read_sev, epoc_filter 
-matplotlib.rcParams['font.size'] = 18 # set font size for all figures
+from scipy.signal import butter, filtfilt, medfilt
+from scipy.stats import linregress
+from tdt import read_block
 
-# from bokeh.plotting import figure, show
-# from bokeh.io import push_notebook, output_notebook
-# output_notebook()
 
-# global variables
-GCAMP = '_465A' # GCaMP channel (dynamic signal) 
-ISOS = '_405A' # Isobestic channel (static signal)
+class Channels(Enum):
+    DYNAMIC = "_465A"
+    ISOS = "_405A"
 
-def resample(data):
-    """making a time array based on the number of samples 
-    and the sample frequency sampling
-    
-    Parameters:
-    -----------
-    data : tdt block"""
-    
-    npts = len(data.streams[GCAMP].data)
-    time_x = np.linspace(1, npts, npts) / data.streams[GCAMP].fs
-    
-    return time_x
 
-def downsampling(data, N=10):
-    """downsampling the data 
-    
-    Parameters:
-    -----------
-    data : tdt block
-    channel : global variable
-        either GCAMP or ISOS
-    N : int
-        number of points for averaging
-        
-    Returns:
-    --------
-    dictionary of numpy arrays with the decimated signal and time 
+@dataclass
+class ImportTDTData:
+    """Class for reading TDT tank data.
+
+    Example:
+    >>> tdt_tank = fp(tank_path="path/to/tank")
+    >>> fiberphotometry_data = tdt_tank.data
     """
-    
-    decimated_GCAMP = []
-    decimated_ISOS = []
-            
-    for i in range(0, len(data.streams[GCAMP].data), N):        
-        # This is the moving window mean
-        decimated_GCAMP.append(np.mean(np.asarray(data.streams[GCAMP].data[i:i+N-1])))
-    data.streams[GCAMP].data = np.asarray(decimated_GCAMP)
-    
-    for i in range(0, len(data.streams[ISOS].data), N):        
-        # This is the moving window mean
-        decimated_ISOS.append(np.mean(np.asarray(data.streams[ISOS].data[i:i+N-1])))
-    data.streams[ISOS].data = np.asarray(decimated_ISOS)
 
-    time_x = np.linspace(1,len(data.streams[GCAMP].data),
-     len(data.streams[GCAMP].data))/data.streams[GCAMP].fs
-    # time_x = resample(data)
-    # time_x = time_x[::N] # go from beginning to end of array in steps on N
-    # time_x = time_x[:len(data.streams[GCAMP].data)]
-        
-    return data
+    tank_path: str  # path to TDT tank
 
-def artifact_removal(data):
-    """There is often a large artifact on the onset
-       of LEDs turning on. This function removes data below a set time t
-       
-    Parameters:
-    -----------
-    data : tdt block
-    channel : global variable
-        either GCAMP or ISOS
-     """
-    
-    
-    t = 8
-    time_x = resample(data)
-    
-    inds = np.where(time_x > t)
-    ind = inds[0][0]
-    time_x = time_x[ind:] # go from ind to final index
-    
-    data.streams[GCAMP].data = np.asarray(data.streams[GCAMP].data[ind:])
-    data.streams[ISOS].data = np.asarray(data.streams[ISOS].data[ind:])
-        
-    return data
-  
-    
-def detrending(data, time=False):
-    """Full trace dFF according to Lerner et al. 2015
-       dFF using 405 fit as baseline
-    """
-    x = np.array(data.streams[ISOS].data)
-    y = np.array(data.streams[GCAMP].data)
-    bls = np.polyfit(x, y, 1)
-    Y_fit_all = np.multiply(bls[0], x) + bls[1]
-    Y_dF_all = y - Y_fit_all
+    DYNAMIC_CHANNEL: str = Channels.DYNAMIC.value
+    ISOS_CHANNEL: str = Channels.ISOS.value
 
-    dFF = np.multiply(100, np.divide(Y_dF_all, Y_fit_all))
-    std_dFF = np.std(dFF)
+    def __post_init__(self):
+        try:
+            self.data = read_block(self.tank_path)
+        except Exception as e:
+            raise RuntimeError(f"Error reading TDT tank: {e}")
 
-    npts = len(dFF)
-    time_x = np.linspace(1, npts, npts) / data.streams[GCAMP].fs
-    
-    if time:
-        return dFF, time_x
-    else:
-        return dFF
-    
-    
-    
-def plotting(data, ax=None, kind='raw'):
-    """ plotting the fiberphotometry traces
-    
-    Parameters:
-    -----------
-    data: tdt data
-    kind: string
-        'raw' - raw data as it was recorded
-        'rawDemod' - raw demodulated data, with artifact removal
-        'dfof' - delta F over F plot
-    ax : axes object (optional)
-    N : int
-        number of points for averaging 
-     
-    """
-    
-    if ax is None:
-        ax=plt.gca()
-             
-    if (kind=='raw'):
-        time_x = resample(data)
-        p1, = ax.plot(time_x, np.asarray(data.streams[GCAMP].data),
-         linewidth=.2, color='green', label='GCaMP')
-        p2, = ax.plot(time_x, np.asarray(data.streams[ISOS].data),
-         linewidth=.2, color='blueviolet', label='ISOS')
-        ax.set_title('Raw Demodulated Responses')
-        ax.set_ylabel('mV')
-        ax.set_xlabel('Seconds')
-        ax.set_title('raw photometry traces')
-        ax.legend(handles=[p1,p2], loc='upper right')
-     
-    elif (kind=='rawDemod'):
-        data = artifact_removal(data)
-        time_x = resample(data)
-        p1, = ax.plot(time_x, np.asarray(data.streams[GCAMP].data),
-         linewidth=.2, color='green', label='GCaMP')
-        p2, = ax.plot(time_x, np.asarray(data.streams[ISOS].data),
-         linewidth=.2, color='blueviolet', label='ISOS')    
-        ax.set_ylabel('mV')
-        ax.set_xlabel('Seconds')
-        ax.set_title('Demodulated photometry traces')
-        ax.legend(handles=[p1,p2], loc='upper right')
-    
-    elif (kind=='dfof'):                    
-        dFF, time_x = detrending(data, time=True)        
-        p1, = ax.plot(time_x, np.array(dFF), linewidth=.2,
-               color='green', label='GCaMP')
-        ax.set_ylabel(r'$\Delta$F/F')
-        ax.set_xlabel('Seconds')
-        ax.legend(handles=[p1], loc='upper right')
-        ax.set_title('dFoF')
+    @property
+    def sampling_frequency(self) -> float:
+        """Sampling frequency of the data."""
+        return self.data.streams[self.DYNAMIC_CHANNEL].fs
 
-    return ax    
+    def load_data(self, channel: str) -> np.array:
+        """Loads raw data for the specified channel."""
+        try:
+            return self.data.streams[channel].data
+        except KeyError:
+            raise ValueError(f"Channel {channel} not found in data.")
+
+
+class SignalPreprocessor:
+    """Class for preprocessing signals from fiber photometry data."""
+
+    @staticmethod
+    def preprocess(
+        raw_data: np.array, sampling_frequency: float
+    ) -> Tuple[np.array, np.array]:
+        """Denoises signal with a median and lowpass filter, then subtracts a 4th order polynomial fit from the data."""
+        # Median and lowpass filter with filtfilt
+        median_filter = medfilt(raw_data, kernel_size=5)
+
+        b, a = butter(2, 10, btype="low", fs=sampling_frequency)
+        denoised = filtfilt(b, a, median_filter)
+
+        # Fit 4th order polynomial to GCaMP signal and subtract
+        coefs = np.polyfit(
+            np.linspace(0, len(raw_data), num=len(raw_data)), denoised, deg=4
+        )
+        polyfit_data = np.polyval(
+            coefs, np.linspace(0, len(raw_data), num=len(raw_data))
+        )
+
+        debleached = denoised - polyfit_data
+
+        return debleached, denoised
+
+
+class MotionCorrector:
+    """Class for correcting motion artifacts in fiber photometry data."""
+
+    @staticmethod
+    def correct_motion(signal_prepro: np.array, isos_prepro: np.array) -> np.array:
+        """Corrects motion by finding the linear fit between preprocessed signal and isosbestic signals."""
+        # Find linear fit
+        slope, intercept, _, _, _ = linregress(x=isos_prepro, y=signal_prepro)
+
+        # Estimate motion correction and subtract
+        est_motion = intercept + slope * isos_prepro
+        motion_corrected = signal_prepro - est_motion
+
+        return motion_corrected
+
+
+class DeltaFoFCalculator:
+    """Class for calculating dF/F from fiber photometry data."""
+
+    @staticmethod
+    def calculate_dfof(
+        motion_corrected: np.array, denoised: np.array, sampling_frequency: float
+    ) -> np.array:
+        """Calculates the dF/F using the denoised data and the motion corrected signal."""
+        b, a = butter(2, 0.001, btype="low", fs=sampling_frequency)
+        baseline_fluorescence = filtfilt(b, a, denoised, padtype="even")
+
+        dF_F = motion_corrected / baseline_fluorescence
+
+        return dF_F
+
+
+@dataclass
+class FiberPhotometryAnalysis:
+    """Class for running the complete fiber photometry analysis."""
+
+    tank_path: str
+
+    def __post_init__(self):
+        self.photometry = ImportTDTData(tank_path=self.tank_path)
+
+    def calculate_deltaf_f(self, strategy: str = "default") -> np.array:
+        """Calculates the dF/F signal from the raw data using the specified strategy."""
+        # Load data
+        dynamic_data = self.photometry.load_data(self.photometry.DYNAMIC_CHANNEL.value)
+        isos_data = self.photometry.load_data(self.photometry.ISOS_CHANNEL.value)
+
+        if strategy == "default":
+            # Preprocess signals
+            signal_prepro, signal_denoised = SignalPreprocessor.preprocess(
+                dynamic_data, self.photometry.sampling_frequency
+            )
+            isos_prepro, _ = SignalPreprocessor.preprocess(
+                isos_data, self.photometry.sampling_frequency
+            )
+
+            # Correct motion
+            signal_corrected = MotionCorrector.correct_motion(
+                signal_prepro, isos_prepro
+            )
+
+            # Calculate dF/F
+            signal_dF_F = DeltaFoFCalculator.calculate_dfof(
+                signal_corrected, signal_denoised, self.photometry.sampling_frequency
+            )
+        elif strategy == "tdt":
+            signal_dF_F = DeltaFoFStrategies.dfof_tdt(self.photometry.data)
+        else:
+            raise ValueError(f"Unknown strategy: {strategy}")
+
+        return signal_dF_F
+
+
+class DeltaFoFStrategies:
+    """Class for various strategies of calculating dF/F from fiber photometry data."""
+
+    @staticmethod
+    def dfof_tdt(f_data):
+        """Calculate dF/F using the method in the TDT Offline Data Analysis workbook.
+        based on Lerner et al. 2015
+        https://dx.doi.org/10.1016/j.cell.2015.07.014
+
+        Parameters:
+        -----------
+        f_data: TDT tank data
+            Fiber photometry data
+
+        Returns:
+        --------
+        dF_F: np.array
+            dF/F signal
+        """
+        x = f_data["streams"][Channels.ISOS.value].data  # isos
+        y = f_data["streams"][Channels.DYNAMIC.value].data  # GCaMP
+
+        bls = np.polyfit(x, y, 1)
+
+        Y_fit_all = bls[0] * y + bls[1] if bls[0] >= 0 else np.mean(y)
+        Y_dF_all = y - Y_fit_all
+
+        dF_F = 100 * (Y_dF_all / Y_fit_all)
+        return dF_F
