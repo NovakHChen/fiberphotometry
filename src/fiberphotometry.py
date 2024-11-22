@@ -100,6 +100,7 @@ class DeltaFoFCalculator:
     def calculate_dfof(
         motion_corrected: np.array, denoised: np.array, sampling_frequency: float
     ) -> np.array:
+    
         """Calculates the dF/F using the denoised data and the motion corrected signal."""
         b, a = butter(2, 0.001, btype="low", fs=sampling_frequency)
         baseline_fluorescence = filtfilt(b, a, denoised, padtype="even")
