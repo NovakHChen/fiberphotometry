@@ -8,7 +8,7 @@ Basic routines for reading, visualizing and analyzing fiberphotometry recordings
 1. Create a new environment by running the following lines in the anaconda terminal
 
    ```bash
-   conda create --name fiberphotometry python=3.10.12
+   conda create --name fiberphotometry python=3.10.12, pip
    ```
 
 1. activte the environment:
