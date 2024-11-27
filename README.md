@@ -35,6 +35,18 @@ Basic routines for reading, visualizing and analyzing fiberphotometry recordings
    pip install .
    ```
 
+1. or if you want to install the package in editable mode:
+
+   ```bash
+   pip install -e .
+   ```
+
+1. The package can be used as a module in python scripts or jupyter notebooks. E.g.:
+   
+   ```python
+   import src.fiberphotometry as fp
+   ```
+
 ## Installation in a Google Colab notebook
 
 1. open a Colab notebook then type this in a code cell:
