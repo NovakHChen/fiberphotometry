@@ -33,8 +33,8 @@ class ImportTDTData:
     """
 
     tank_path: str  # path to TDT tank
-    DYNAMIC_CHANNEL: str = Channels.DYNAMIC  # .value
-    ISOS_CHANNEL: str = Channels.ISOS  # .value
+    DYNAMIC_CHANNEL: str = Channels.DYNAMIC
+    ISOS_CHANNEL: str = Channels.ISOS
 
     kwargs: Dict[str, Any] = field(default_factory=dict)
 
@@ -177,8 +177,8 @@ class DeltaFoFStrategies:
         dF_F: np.array
             dF/F signal
         """
-        x = f_data["streams"][Channels.ISOS.value].data  # isos
-        y = f_data["streams"][Channels.DYNAMIC.value].data  # GCaMP
+        x = f_data["streams"][Channels.ISOS.value].data
+        y = f_data["streams"][Channels.DYNAMIC.value].data
 
         bls = np.polyfit(x, y, 1)
 
