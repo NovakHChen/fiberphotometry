@@ -33,8 +33,8 @@ class ImportTDTData:
     """
 
     tank_path: str  # path to TDT tank
-    DYNAMIC_CHANNEL: str = Channels.DYNAMIC.value
-    ISOS_CHANNEL: str = Channels.ISOS.value
+    DYNAMIC_CHANNEL: str = Channels.DYNAMIC  # .value
+    ISOS_CHANNEL: str = Channels.ISOS  # .value
 
     kwargs: Dict[str, Any] = field(default_factory=dict)
 
@@ -47,14 +47,14 @@ class ImportTDTData:
     @property
     def sampling_frequency(self) -> float:
         """Sampling frequency of the data."""
-        return self.data.streams[self.DYNAMIC_CHANNEL].fs
+        return self.data.streams[self.DYNAMIC_CHANNEL.value].fs
 
-    def load_data(self, channel: str) -> np.array:
+    def load_data(self, channel: Channels) -> np.array:
         """Loads raw data for the specified channel."""
         try:
-            return self.data.streams[channel].data
+            return self.data.streams[channel.value].data
         except KeyError:
-            raise ValueError(f"Channel {channel} not found in data.")
+            raise ValueError(f"Channel {channel.value} not found in data.")
 
 
 class SignalPreprocessor:
@@ -121,15 +121,16 @@ class FiberPhotometryAnalysis:
     """Class for running the complete fiber photometry analysis."""
 
     tank_path: str
+    kwargs: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
-        self.photometry = ImportTDTData(tank_path=self.tank_path)
+        self.photometry = ImportTDTData(tank_path=self.tank_path, kwargs=self.kwargs)
 
     def calculate_deltaf_f(self, strategy: str = "default") -> np.array:
         """Calculates the dF/F signal from the raw data using the specified strategy."""
         # Load data
-        dynamic_data = self.photometry.load_data(self.photometry.DYNAMIC_CHANNEL.value)
-        isos_data = self.photometry.load_data(self.photometry.ISOS_CHANNEL.value)
+        dynamic_data = self.photometry.load_data(self.photometry.DYNAMIC_CHANNEL)
+        isos_data = self.photometry.load_data(self.photometry.ISOS_CHANNEL)
 
         if strategy == "default":
             # Preprocess signals
