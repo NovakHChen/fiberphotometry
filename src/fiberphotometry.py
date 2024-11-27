@@ -2,9 +2,9 @@
 This class is based on [FiberFlow](https://github.com/MicTott/FiberFlow)
 maintainer: @gergelyturi"""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import Tuple
+from typing import Any, Dict, Tuple
 
 import numpy as np
 from scipy.signal import butter, filtfilt, medfilt
@@ -22,18 +22,25 @@ class ImportTDTData:
     """Class for reading TDT tank data.
 
     Example:
-    >>> tdt_tank = fp(tank_path="path/to/tank")
+    >>> import src.fiberphotometry as fp
+    >>> tdt_tank = fp.ImportTDTData(tank_path="path/to/tank")
     >>> fiberphotometry_data = tdt_tank.data
+
+    or with kwargs:
+    >>> tdt_tank = fp.ImportTDTData(tank_path="path/to/tank", kwargs={"evtype": ["epocs]})
+
+    for available kwargs see: https://www.tdt.com/docs/sdk/offline-data-analysis/offline-data-python/
     """
 
     tank_path: str  # path to TDT tank
-
     DYNAMIC_CHANNEL: str = Channels.DYNAMIC.value
     ISOS_CHANNEL: str = Channels.ISOS.value
 
+    kwargs: Dict[str, Any] = field(default_factory=dict)
+
     def __post_init__(self):
         try:
-            self.data = read_block(self.tank_path)
+            self.data = read_block(self.tank_path, **self.kwargs)
         except Exception as e:
             raise RuntimeError(f"Error reading TDT tank: {e}")
 
