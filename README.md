@@ -12,7 +12,7 @@ Basic routines for reading, visualizing and analyzing fiberphotometry recordings
    git clone https://github.com/GergelyTuri/fiberphotometry.git
    ```
 
-   Alternatively, you can download only the `environmental.yaml` file.
+   Alternatively, you can download only the `environment.yaml` file.
 
 1. change directories
 
@@ -30,6 +30,18 @@ Basic routines for reading, visualizing and analyzing fiberphotometry recordings
 
    ```bash
    conda activate fiber-photometry-analysis
+   ```
+
+1. finally:
+
+   ```bash
+   pip install .
+   ```
+
+   or if you want to install the package in editable mode:
+
+   ```bash
+   pip install -e .
    ```
 
 ## Local installation via pip (some sort of environment is higly recommended)
