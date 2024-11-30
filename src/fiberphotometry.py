@@ -49,6 +49,14 @@ class ImportTDTData:
         """Sampling frequency of the data."""
         return self.data.streams[self.DYNAMIC_CHANNEL.value].fs
 
+    @property
+    def raw_data(self) -> Dict[str, np.array]:
+        """Returns raw data for both channels."""
+        return {
+            "dynamic": self.load_data(self.DYNAMIC_CHANNEL),
+            "isos": self.load_data(self.ISOS_CHANNEL),
+        }
+
     def load_data(self, channel: Channels) -> np.array:
         """Loads raw data for the specified channel."""
         try:

@@ -13,7 +13,6 @@ Main Execution:
 - Iterates over onsets and offsets to process and save fiber photometry data segments.
 
 created by: Gergely Turi 11/29/2024
-TODO: fix file names, it seems that the way how the datetime is increased is not working properly.
 """
 
 import argparse as ap
@@ -45,14 +44,9 @@ def calculate_recording_start_times(recording_start_datetime, onsets):
     # Initialize the `recording_start_times` list
     recording_start_times = []
 
-    # Set the initial recording time
-    current_time = recording_start_datetime + timedelta(seconds=float(onsets[0]))
-    recording_start_times.append(current_time)
-
-    # Iterate over the remaining onsets to add cumulative times
-    for onset in onsets[1:]:
-        current_time += timedelta(seconds=float(onset))
-        recording_start_times.append(current_time)
+    for onset in onsets:
+        recording_start_time = recording_start_datetime + timedelta(seconds=onset)
+        recording_start_times.append(recording_start_time)
 
     return recording_start_times
 
@@ -111,7 +105,7 @@ def create_output_folder(data_dir, overwrite=False, alternative_name=None):
 
 if __name__ == "__main__":
     # Setup logging
-    lm.setup_logging()
+    lm.setup_logging(log_file_name="long_rec_data_extraction.log")
 
     # Parse the command line arguments
     parser = ap.ArgumentParser(description="Extract data from long recordings.")
@@ -179,8 +173,8 @@ if __name__ == "__main__":
                 "t2": float(off),
             },
         )
-        raw_ISO = data_segment.data.streams._405A.data
-        raw_dynamic = data_segment.data.streams._465A.data
+        raw_ISO = data_segment.raw_data["isos"]
+        raw_dynamic = data_segment.raw_data["dynamic"]
 
         processed_data = fp.FiberPhotometryAnalysis(
             data_path,
@@ -193,7 +187,7 @@ if __name__ == "__main__":
         dff = processed_data.calculate_deltaf_f()
 
         # Save the data
-        save_name = f"fiber_data_{format_datetime_for_filename(start)}_{on}_{off}.csv"
+        save_name = f"fiber_data_{format_datetime_for_filename(start)}_{round(adjusted_on)}_{round(off)}.csv"
         lm.log_info(f"Saving data to {save_name}.")
         data_to_save = {
             "raw_405nm": raw_ISO,
