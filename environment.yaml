@@ -1,0 +1,25 @@
+name: fiber-photometry-analysis
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10.12
+  - bokeh
+  - easygui
+  - holoviews
+  - ipykernel
+  - ipython
+  - jinja2
+  - jupyter
+  - jupyter_bokeh
+  - matplotlib
+  - notebook
+  - numpy
+  - opencv
+  - pandas
+  - rich
+  - scikit-learn
+  - scipy
+  - pip
+  - pip:
+      - tdt

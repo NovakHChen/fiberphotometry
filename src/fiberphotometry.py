@@ -2,14 +2,14 @@
 This class is based on [FiberFlow](https://github.com/MicTott/FiberFlow)
 maintainer: @gergelyturi"""
 
-from dataclasses import dataclass
-from typing import Tuple
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any, Dict, Tuple
 
 import numpy as np
 from scipy.signal import butter, filtfilt, medfilt
 from scipy.stats import linregress
 from tdt import read_block
-from enum import Enum
 
 
 class Channels(Enum):
@@ -22,32 +22,47 @@ class ImportTDTData:
     """Class for reading TDT tank data.
 
     Example:
-    >>> tdt_tank = fp(tank_path="path/to/tank")
+    >>> import src.fiberphotometry as fp
+    >>> tdt_tank = fp.ImportTDTData(tank_path="path/to/tank")
     >>> fiberphotometry_data = tdt_tank.data
+
+    or with kwargs:
+    >>> tdt_tank = fp.ImportTDTData(tank_path="path/to/tank", kwargs={"evtype": ["epocs]})
+
+    for available kwargs see: https://www.tdt.com/docs/sdk/offline-data-analysis/offline-data-python/
     """
 
     tank_path: str  # path to TDT tank
+    DYNAMIC_CHANNEL: str = Channels.DYNAMIC
+    ISOS_CHANNEL: str = Channels.ISOS
 
-    DYNAMIC_CHANNEL: str = Channels.DYNAMIC.value
-    ISOS_CHANNEL: str = Channels.ISOS.value
+    kwargs: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
         try:
-            self.data = read_block(self.tank_path)
+            self.data = read_block(self.tank_path, **self.kwargs)
         except Exception as e:
             raise RuntimeError(f"Error reading TDT tank: {e}")
 
     @property
     def sampling_frequency(self) -> float:
         """Sampling frequency of the data."""
-        return self.data.streams[self.DYNAMIC_CHANNEL].fs
+        return self.data.streams[self.DYNAMIC_CHANNEL.value].fs
 
-    def load_data(self, channel: str) -> np.array:
+    @property
+    def raw_data(self) -> Dict[str, np.array]:
+        """Returns raw data for both channels."""
+        return {
+            "dynamic": self.load_data(self.DYNAMIC_CHANNEL),
+            "isos": self.load_data(self.ISOS_CHANNEL),
+        }
+
+    def load_data(self, channel: Channels) -> np.array:
         """Loads raw data for the specified channel."""
         try:
-            return self.data.streams[channel].data
+            return self.data.streams[channel.value].data
         except KeyError:
-            raise ValueError(f"Channel {channel} not found in data.")
+            raise ValueError(f"Channel {channel.value} not found in data.")
 
 
 class SignalPreprocessor:
@@ -114,15 +129,16 @@ class FiberPhotometryAnalysis:
     """Class for running the complete fiber photometry analysis."""
 
     tank_path: str
+    kwargs: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
-        self.photometry = ImportTDTData(tank_path=self.tank_path)
+        self.photometry = ImportTDTData(tank_path=self.tank_path, kwargs=self.kwargs)
 
     def calculate_deltaf_f(self, strategy: str = "default") -> np.array:
         """Calculates the dF/F signal from the raw data using the specified strategy."""
         # Load data
-        dynamic_data = self.photometry.load_data(self.photometry.DYNAMIC_CHANNEL.value)
-        isos_data = self.photometry.load_data(self.photometry.ISOS_CHANNEL.value)
+        dynamic_data = self.photometry.load_data(self.photometry.DYNAMIC_CHANNEL)
+        isos_data = self.photometry.load_data(self.photometry.ISOS_CHANNEL)
 
         if strategy == "default":
             # Preprocess signals
@@ -169,8 +185,8 @@ class DeltaFoFStrategies:
         dF_F: np.array
             dF/F signal
         """
-        x = f_data["streams"][Channels.ISOS.value].data  # isos
-        y = f_data["streams"][Channels.DYNAMIC.value].data  # GCaMP
+        x = f_data["streams"][Channels.ISOS.value].data
+        y = f_data["streams"][Channels.DYNAMIC.value].data
 
         bls = np.polyfit(x, y, 1)
 
