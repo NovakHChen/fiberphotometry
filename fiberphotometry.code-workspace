@@ -3,5 +3,10 @@
 		{
 			"path": "."
 		}
-	]
+	],	
+	"settings": {
+		"workbench.colorCustomizations": {
+			"titleBar.activeBackground": "#0d71ec",		
+		},
+		},
 }
