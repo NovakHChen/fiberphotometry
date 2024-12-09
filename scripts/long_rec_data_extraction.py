@@ -145,13 +145,18 @@ if __name__ == "__main__":
     recording_epocs = fp.ImportTDTData(
         tank_path=data_path, kwargs={"evtype": ["epocs"]}
     )
-
-    onsets = recording_epocs.data.epocs.TC1_.onset
-    offsets = recording_epocs.data.epocs.TC1_.offset
-    on_off_times = {
-        "onsets": onsets,
-        "offsets": offsets,
-    }
+    try:
+        onsets = recording_epocs.data.epocs.TC1_.onset
+        offsets = recording_epocs.data.epocs.TC1_.offset
+        on_off_times = {
+            "onsets": onsets,
+            "offsets": offsets,
+        }
+    except AttributeError:
+        lm.log_error(
+            "Recording epocs do not contain the expected epoc data in 'TC1_' channel."
+        )
+        sys.exit(1)
 
     recording_start_date_time = recording_epocs.data.info.start_date
 
