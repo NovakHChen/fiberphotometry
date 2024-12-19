@@ -209,6 +209,7 @@ class UsbVideo:
         w_frame, h_frame = (
             int(cap.get(CAP_PROP_FRAME_WIDTH)),
             int(cap.get(CAP_PROP_FRAME_HEIGHT)),
+        )
         w_frame, h_frame = (
             int(cap.get(CAP_PROP_FRAME_WIDTH)),
             int(cap.get(CAP_PROP_FRAME_HEIGHT)),
